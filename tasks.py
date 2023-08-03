@@ -4,22 +4,23 @@ import asyncio
 from random import choice
 
 async def AutomateChecking( task: Task, redis_db: Redis ) -> list[ Piece ]:
+    already = set([ piece.item for piece in task.processed + task.skipped ])
     pieces = []
     extracted = task.data.strip().split("\n")
     for i,line in enumerate(extracted):
+        if line in already: continue
         print("background : "+line)
         piece = Piece(item=line, info="infoinfo", valid=choice([False, True]))
         pieces.append( piece )
-        #redis_db.set(line, piece.model_dump_json() )
-        await redis_db.publish(task.task_id, piece.model_dump_json())
-        task.extracted.append(piece)
+        await redis_db.publish(task.id, piece.model_dump_json())
         task.processed.append(piece)
+        already.add(line)
         if i == len(extracted) - 1:break
-        await redis_db.set(task.task_id, task.model_dump_json())
-        await asyncio.sleep(10)
+        await task.save(redis_db)
+        await asyncio.sleep(5)
     
     task.finished = True
-    await redis_db.set(task.task_id, task.model_dump_json())
-
+    await task.save(redis_db)
+    await redis_db.publish(task.id, b'{"finished": true}')
     
     return pieces
