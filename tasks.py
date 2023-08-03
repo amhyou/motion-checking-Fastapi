@@ -1,5 +1,5 @@
 from aioredis import Redis
-from models import Task, Piece
+from models import Task, Piece, Account
 import asyncio
 from random import choice
 
@@ -22,5 +22,12 @@ async def AutomateChecking( task: Task, redis_db: Redis ) -> list[ Piece ]:
     task.finished = True
     await task.save(redis_db)
     await redis_db.publish(task.id, b'{"finished": true}')
+
+    try:
+        account: Account = await Account.fetch(redis_db, "current_account")
+        account.current_task_id = None
+        await account.save(redis_db, "current_account")
+    except Exception as ex:
+        print(ex)
     
     return pieces

@@ -23,7 +23,7 @@ class SaasModel(BaseModel):
 class Account(SaasModel):
     email: str
     password: str
-    current_task_id: str = None
+    current_task_id: str | None = None
 
 
 class Piece(SaasModel):

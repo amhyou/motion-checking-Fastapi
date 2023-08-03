@@ -7,11 +7,11 @@ class AccountInput(BaseModel):
 
 class AccountOutput(BaseModel):
     email: EmailStr = None
-    task_id: str = None
+    task_id: str | None = None
 
 
 class TaskInput(BaseModel):
     data: str
 
 class TaskOutput(BaseModel):
-    task_id: str = None
+    task_id: str | None = None

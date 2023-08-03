@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, WebSocket, BackgroundTasks
 import uvicorn, json, subprocess, asyncio
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from aioredis import Redis, from_url
 from config import settings
 from tasks import AutomateChecking
@@ -14,6 +15,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 async def startup():
@@ -56,7 +58,7 @@ async def register_account(account: AccountInput, redis_db: Redis = Depends(get_
 @app.post("/discard_account")
 async def discard_account(redis_db: Redis = Depends(get_redis_db)) -> AccountOutput:
     try:
-        result = await redis_db.delete("current_account")
+        await redis_db.delete("current_account")
         return AccountOutput
     except Exception as e:
         print(e)
@@ -66,25 +68,25 @@ async def discard_account(redis_db: Redis = Depends(get_redis_db)) -> AccountOut
 # data management
 
 @app.post("/process_data")
-async def set_redis_key(task: TaskInput, background_tasks: BackgroundTasks, redis_db: Redis = Depends(get_redis_db)):
-    # verify all tasks have already finished
-    """
-    curr_task = await redis_db.get("current_task")
-    if curr_task:
-        curr_task = Task.model_validate_json(curr_task)
-        if not curr_task.finished:
-            raise Exception("already running task")
-    """
-    current_task = Task(data=task.data)
-    await current_task.save(redis_db)
-    await redis_db.lpush("tasks", current_task.id)
-    await redis_db.set("current_task", current_task.model_dump_json())
-    background_tasks.add_task(AutomateChecking, current_task, redis_db)
-    return TaskOutput(task_id=current_task.id)
-
+async def process_data(task: TaskInput, background_tasks: BackgroundTasks, redis_db: Redis = Depends(get_redis_db)) -> TaskOutput:
+    try:
+        account: Account = await Account.fetch(redis_db, "current_account")
+    except Exception as ex:
+        print(ex)
+        return TaskOutput
+    if account.current_task_id is None:
+        current_task = Task(data=task.data)
+        await current_task.save(redis_db)
+        account.current_task_id = current_task.id
+        await account.save(redis_db, "current_account")
+        await redis_db.lpush("tasks", current_task.id)
+        background_tasks.add_task(AutomateChecking, current_task, redis_db)
+        return TaskOutput(task_id=current_task.id)
+    else: 
+        return TaskOutput
 
 @app.post("/getall_data")
-async def get_redis_key(redis_db: Redis = Depends(get_redis_db)) -> list[ Task ]:
+async def getall_data(redis_db: Redis = Depends(get_redis_db)) -> list[ Task ]:
     results = await redis_db.lrange("tasks", 0, -1)
     tasks = []
     for result in results:
@@ -99,15 +101,26 @@ async def get_redis_key(redis_db: Redis = Depends(get_redis_db)) -> list[ Task ]
 
 # task management
 
-@app.websocket("/{task_id}")
-async def websocket_endpoint(websocket: WebSocket, task_id: str, redis_db: Redis = Depends(get_redis_db)):
-    
-    task: Task = await Task.fetch(redis_db, task_id)
+@app.websocket("/")
+async def websocket_endpoint(websocket: WebSocket, redis_db: Redis = Depends(get_redis_db)):
+    try:
+        account: Account = await Account.fetch(redis_db, "current_account")
+    except Exception as ex:
+        print(ex)
+        await websocket.close()
+        return
+    try:
+        task: Task = await Task.fetch(redis_db, account.current_task_id)
+    except Exception as ex:
+        print(ex)
+        await websocket.close()
+        return
+
     await websocket.accept()
     await websocket.send_json([ piece.model_dump() for piece in task.processed ])
 
     pubsub = redis_db.pubsub()
-    await pubsub.subscribe(task_id)
+    await pubsub.subscribe(task.id)
     while True:
         message = await pubsub.get_message()
         if message and message.get("data") != 1:
@@ -116,7 +129,7 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str, redis_db: Redis
             if data.get("finished", False): await websocket.close(); return
             await websocket.send_json(data)
         
-        await asyncio.sleep(5)
+        await asyncio.sleep(1)
 
 
 @app.on_event("shutdown")
