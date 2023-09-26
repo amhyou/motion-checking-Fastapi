@@ -2,6 +2,7 @@ from aioredis import Redis
 from models import Task, Piece, Account
 import asyncio
 from random import choice
+from math import ceil
 
 async def AutomateChecking( task: Task, redis_db: Redis ) -> list[ Piece ]:
     already = set([ piece.item for piece in task.processed + task.skipped ])
@@ -14,6 +15,7 @@ async def AutomateChecking( task: Task, redis_db: Redis ) -> list[ Piece ]:
         pieces.append( piece )
         await redis_db.publish(task.id, piece.model_dump_json())
         task.processed.append(piece)
+        task.progression = ceil( len(task.processed) / len(extracted) )
         already.add(line)
         if i == len(extracted) - 1:break
         await task.save(redis_db)

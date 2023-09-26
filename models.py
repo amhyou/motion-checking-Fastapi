@@ -36,5 +36,6 @@ class Task(SaasModel):
     data: str
     processed: list[ Piece ] = []
     skipped: list[ Piece ] = []
+    progression: int = 0
     paused: bool = True
     finished: bool = False

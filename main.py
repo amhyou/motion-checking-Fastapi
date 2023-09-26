@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, WebSocket, BackgroundTasks
+from fastapi import FastAPI, Depends, WebSocket, BackgroundTasks, Request
 import uvicorn, json, subprocess, asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +24,10 @@ async def startup():
 def get_redis_db() -> Redis:
     return app.state.redis_db
 
+
+@app.get("/test")
+def test(request: Request):
+    return {"link": request.headers["host"]}
 
 # account management
 

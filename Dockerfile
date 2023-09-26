@@ -1,16 +1,16 @@
-FROM python:3.10-slim-buster
+FROM python:3.10-alpine
 
 
 WORKDIR /saas
 
 
-COPY ./requirements.txt /saas/requirements.txt
+COPY ./requirements.txt .
 
 
-RUN pip install --no-cache-dir --upgrade -r /saas/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 
-COPY ./app /saas/app
+COPY . .
 
 
 EXPOSE 8000
