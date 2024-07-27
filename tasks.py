@@ -9,13 +9,15 @@ async def AutomateChecking( task: Task, redis_db: Redis ) -> list[ Piece ]:
     pieces = []
     extracted = task.data.strip().split("\n")
     for i,line in enumerate(extracted):
-        if line in already: continue
+        # if line in already: continue   for mvp
         print("background : "+line)
-        piece = Piece(item=line, info="infoinfo", valid=choice([False, True]))
+        print(i, len(extracted))
+        progression = int( ( i / len(extracted) ) * 100 )
+        piece = Piece(item=line, info="infoinfo", progression=progression,  valid=choice([False, True]))
         pieces.append( piece )
         await redis_db.publish(task.id, piece.model_dump_json())
         task.processed.append(piece)
-        task.progression = ceil( len(task.processed) / len(extracted) )
+        task.progression = progression
         already.add(line)
         if i == len(extracted) - 1:break
         await task.save(redis_db)

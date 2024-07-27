@@ -5,7 +5,6 @@ anyio==3.7.1
 async-timeout==4.0.2
 bidict==0.22.1
 billiard==4.1.0
-celery==5.3.1
 certifi==2023.7.22
 charset-normalizer==3.2.0
 click==8.1.5
@@ -17,13 +16,11 @@ dnspython==2.4.1
 email-validator==2.0.0.post2
 exceptiongroup==1.1.2
 fastapi==0.100.0
-gmsaas==1.8.0
 h11==0.14.0
 httptools==0.6.0
 idna==3.4
 kombu==5.3.1
 prompt-toolkit==3.0.39
-psutil==5.9.5
 pydantic==2.0.3
 pydantic-settings==2.0.2
 pydantic_core==2.3.0
@@ -32,7 +29,7 @@ python-dateutil==2.8.2
 python-dotenv==1.0.0
 python-engineio==4.5.1
 python-socketio==5.8.0
-PyYAML==6.0
+PyYAML
 redis==4.6.0
 requests==2.31.0
 requests-toolbelt==1.0.0
@@ -47,5 +44,5 @@ uvicorn==0.23.0
 vine==5.0.0
 watchfiles==0.19.0
 wcwidth==0.2.6
-websocket-client==1.6.1
-websockets==11.0.3
+websocket-client
+websockets

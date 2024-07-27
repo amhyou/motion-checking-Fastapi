@@ -15,7 +15,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 async def startup():
@@ -43,7 +43,8 @@ async def check_account(redis_db: Redis = Depends(get_redis_db)) -> AccountOutpu
 
 @app.post("/register_account")
 async def register_account(account: AccountInput, redis_db: Redis = Depends(get_redis_db)) -> AccountOutput:
-    cli_command = f'gmsaas auth login {account.email} {account.password}'
+    # cli_command = f'gmsaas auth login {account.email} {account.password}'
+    cli_command = f'python --version'
     try:
         result = subprocess.run(cli_command, shell=True, capture_output=True, text=True)
         if result.returncode == 0:
@@ -109,6 +110,7 @@ async def getall_data(redis_db: Redis = Depends(get_redis_db)) -> list[ Task ]:
 async def websocket_endpoint(websocket: WebSocket, redis_db: Redis = Depends(get_redis_db)):
     try:
         account: Account = await Account.fetch(redis_db, "current_account")
+        print(account)
     except Exception as ex:
         print(ex)
         await websocket.close()
@@ -121,6 +123,7 @@ async def websocket_endpoint(websocket: WebSocket, redis_db: Redis = Depends(get
         return
 
     await websocket.accept()
+    print([ piece.model_dump() for piece in task.processed ])
     await websocket.send_json([ piece.model_dump() for piece in task.processed ])
 
     pubsub = redis_db.pubsub()

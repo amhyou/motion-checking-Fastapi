@@ -30,6 +30,7 @@ class Piece(SaasModel):
     item: str
     info: str
     valid: bool = False
+    progression: int = 0
 
 
 class Task(SaasModel):
